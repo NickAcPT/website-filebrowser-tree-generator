@@ -1,0 +1,1 @@
+rootProject.name = "website-filebrowser-tree-generator"
