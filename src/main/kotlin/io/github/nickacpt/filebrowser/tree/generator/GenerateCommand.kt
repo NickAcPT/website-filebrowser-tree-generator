@@ -11,6 +11,7 @@ import io.github.nickacpt.filebrowser.tree.generator.model.FileBrowserEntry
 import io.github.nickacpt.filebrowser.tree.generator.model.FileType
 import io.github.nickacpt.filebrowser.tree.generator.utils.FileTypeDeserializer
 import io.github.nickacpt.filebrowser.tree.generator.utils.FileTypeSerializer
+import java.nio.file.FileSystem
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
@@ -37,14 +38,17 @@ class GenerateCommand : CliktCommand(name = "generate") {
     private val output by argument(help = "The output file to write to")
         .path()
 
-    @OptIn(ExperimentalPathApi::class)
     override fun run() {
-        val rootEntry = FileSystems.newFileSystem(input).use { fs ->
-            val root = fs.getPath("/")
-
-            createFileEntry(root).apply {
+        val action = { fs: FileSystem, root: FileSystem.() -> Path ->
+            createFileEntry(root(fs)).apply {
                 name = ""
             }
+        };
+
+        val rootEntry = if (input.isRegularFile()) {
+            FileSystems.newFileSystem(input).use { action(it) { getPath("/") } }
+        } else {
+            action(FileSystems.getDefault()) { input }
         }
 
         output.writeText(mapper.writeValueAsString(rootEntry))
